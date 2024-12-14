@@ -1,0 +1,169 @@
+---
+title: "GAM Hirsutism"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Clear environment
+rm(list=ls())
+
+# Load necessary packages
+if(!require("mgcv")) {
+  install.packages("mgcv", dependencies=TRUE)
+  library(mgcv)
+}
+```
+
+```{r}
+# 1. Data Import and Preparation
+
+# Bear in mind that there may have some dataset with missing value NA
+hirs <- read.table("hirsutism.dat",header=T, sep="\t",fill=TRUE)
+
+# Check structure and ensure that Treatment is a factor
+
+summary(hirs)
+
+hirs$Treatment <- as.factor(hirs$Treatment)
+```
+
+```{r}
+# 2. Exploratory Data Analysis
+
+summary(hirs)
+attach(hirs)
+
+boxplot(hirs[,2:5])
+
+par(mfrow=c(2,2))
+boxplot(hirs[,2]~Treatment,ylim=c(0,30), main=names(hirs)[2], xlab="Treatment")
+boxplot(hirs[,3]~Treatment,ylim=c(0,30), main=names(hirs)[3], xlab="Treatment")
+boxplot(hirs[,4]~Treatment,ylim=c(0,30), main=names(hirs)[4], xlab="Treatment")
+boxplot(hirs[,5]~Treatment,ylim=c(0,30), main=names(hirs)[5], xlab="Treatment")
+par(mfrow=c(1,1))
+
+par(mfrow=c(2,2))
+boxplot(hirs[Treatment==0,2:5],ylim=c(0,30), main="Treatment 0")
+boxplot(hirs[Treatment==1,2:5],ylim=c(0,30), main="Treatment 1")
+boxplot(hirs[Treatment==2,2:5],ylim=c(0,30), main="Treatment 2")
+boxplot(hirs[Treatment==3,2:5],ylim=c(0,30), main="Treatment 3")
+par(mfrow=c(1,1))
+
+```
+
+
+```{r}
+# 3. Fit Candidate GAM Models
+
+# Model 1: Include all baseline continuous vars as smooth terms and Treatment as a factor
+m1 <- gam(FGm12 ~ Treatment + s(FGm0) + s(SysPres) + s(DiaPres) + s(weight) + s(height),
+          data = hirs, method = "REML")
+
+# Model 2: Allow the relationship with FGm0 to differ by Treatment (using a by-factor smooth)
+m2 <- gam(FGm12 ~ Treatment + 
+                    s(FGm0, by=Treatment) + 
+                    s(SysPres) + s(DiaPres) + s(weight) + s(height),
+          data = hirs, method = "REML")
+
+# Model 3: A more parsimonious model removing blood pressure variables
+m3 <- gam(FGm12 ~ Treatment + s(FGm0) + s(weight) + s(height),
+          data = hirs, method = "REML")
+
+# Model 4: A very simple model including only FGm0 and Treatment
+m4 <- gam(FGm12 ~ Treatment + s(FGm0),
+          data = hirs, method = "REML")
+```
+
+
+```{r}
+# 4. Model Summaries and Diagnostics
+
+cat("---------- Model 1 Summary ----------\n")
+summary(m1)
+cat("\n")
+par(mfrow=c(2,3))
+plot(m1, all.terms=TRUE, shade=TRUE, pages=1, main="Model 1")
+par(mfrow=c(1,1))
+vis.gam(m1, view=c("FGm0","weight"), theta=45, color="topo", main="M1: FGm0 vs weight")
+gam.check(m1)
+
+cat("---------- Model 2 Summary ----------\n")
+summary(m2)
+par(mfrow=c(2,3))
+plot(m2, all.terms=TRUE, shade=TRUE, pages=1, main="Model 2")
+par(mfrow=c(1,1))
+vis.gam(m2, view=c("FGm0","weight"), cond=list(Treatment="1"), 
+        theta=45, color="topo", main="M2: FGm0 vs weight (Treatment=1)")
+gam.check(m2)
+
+cat("---------- Model 3 Summary ----------\n")
+summary(m3)
+par(mfrow=c(2,2))
+plot(m3, all.terms=TRUE, shade=TRUE, pages=1, main="Model 3")
+par(mfrow=c(1,1))
+gam.check(m3)
+
+cat("---------- Model 4 Summary ----------\n")
+summary(m4)
+par(mfrow=c(1,2))
+plot(m4, all.terms=TRUE, shade=TRUE, main="Model 4")
+par(mfrow=c(1,1))
+gam.check(m4)
+```
+
+
+```{r}
+# 5. Model Comparison
+# Use ANOVA to compare nested models. Note: 
+# - Strictly, m2 is not nested in m1 (different structure due to by=Treatment),
+#   but we can still get some insight. For nested comparisons, focus on models
+#   that differ by terms. Alternatively, compare AIC for all models.
+
+cat("\n---------- Model Comparisons (ANOVA) ----------\n")
+anova(m1, m2, m3, m4, test="F")
+
+cat("\n---------- AIC Comparison ----------\n")
+AIC(m1, m2, m3, m4)
+
+```
+
+
+```{r}
+# 6. Selecting the Most Appropriate Model
+
+# Based on the summaries, diagnostics, and comparison:
+# - Look at the deviance explained in summaries.
+# - Check residual patterns in gam.check plots.
+# - Compare AIC values: lower is typically better.
+# - Check significance of smooth terms and treatment effects.
+
+# Once you've decided on the "best" model (for example, say m2 is best),
+# you can then do final checks, interpret results, and plot effects.
+```
+
+```{r}
+# 7. Final Model Interpretation (Example for m2)
+
+# Suppose we choose m2 as the final model:
+cat("\n---------- Final Model (Example: m2) ----------\n")
+summary(m2)
+
+# Examine partial effects more thoroughly:
+par(mfrow=c(2,3))
+plot(m2, all.terms=TRUE, shade=TRUE, main="Final Model (m2)")
+par(mfrow=c(1,1))
+
+# Visualize 3D surfaces for interesting pairs of predictors:
+vis.gam(m2, view=c("FGm0","weight"), cond=list(Treatment="2"), 
+        theta=30, color="terrain", main="M2: FGm0 vs weight (Treatment=2)")
+```
+
