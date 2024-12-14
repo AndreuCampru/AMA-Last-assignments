@@ -36,6 +36,8 @@ summary(hirs)
 hirs$Treatment <- as.factor(hirs$Treatment)
 ```
 
+We have 8 observation, out of 99, that have missing record in patient baseline, but we do have the corresponding treatment result register.
+
 ```{r}
 # 2. Exploratory Data Analysis
 
@@ -60,26 +62,29 @@ par(mfrow=c(1,1))
 
 ```
 
+We can conclude in the four clusters that, even only with contraceptive (Treatment 0), there is a improvement of hirsutism after 12 month of treatment, although no that significant compared with other with antiandrogen.
+
 
 ```{r}
 # 3. Fit Candidate GAM Models
 
-# Model 1: Include all baseline continuous vars as smooth terms and Treatment as a factor
-m1 <- gam(FGm12 ~ Treatment + s(FGm0) + s(SysPres) + s(DiaPres) + s(weight) + s(height),
+# Model 1: A very simple model including only FGm0 and Treatment
+m1 <- gam(FGm12 ~ Treatment + s(FGm0),
           data = hirs, method = "REML")
 
-# Model 2: Allow the relationship with FGm0 to differ by Treatment (using a by-factor smooth)
-m2 <- gam(FGm12 ~ Treatment + 
-                    s(FGm0, by=Treatment) + 
-                    s(SysPres) + s(DiaPres) + s(weight) + s(height),
+# Model 2: A more complex model model revealing the relation with patient physical status
+m2 <- gam(FGm12 ~ Treatment + s(FGm0) + s(weight) + s(height),
           data = hirs, method = "REML")
+# In this case, we will apply smooth function, s(), among the variables, to capture
+# possible no-linear correlation between numerical feature and our target variable.
 
-# Model 3: A more parsimonious model removing blood pressure variables
-m3 <- gam(FGm12 ~ Treatment + s(FGm0) + s(weight) + s(height),
-          data = hirs, method = "REML")
+# Model 3: Include all baseline continuous vars as smooth terms and Treatment as a factor
+m3 <- gam(FGm12 ~ Treatment + s(FGm0) + s(SysPres) + s(DiaPres) + 
+          s(weight) + s(height),data = hirs, method = "REML")
 
-# Model 4: A very simple model including only FGm0 and Treatment
-m4 <- gam(FGm12 ~ Treatment + s(FGm0),
+# Model 4: Allow the relationship with FGm0 to differ by Treatment (using a by-factor smooth) 
+m4 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
+          s(SysPres) + s(DiaPres) + s(weight) + s(height),
           data = hirs, method = "REML")
 ```
 
