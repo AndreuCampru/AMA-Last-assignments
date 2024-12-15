@@ -361,11 +361,9 @@ if(!require(&quot;mgcv&quot;)) {
   install.packages(&quot;mgcv&quot;, dependencies=TRUE)
   library(mgcv)
 }</code></pre>
-<pre><code>## Loading required package: mgcv</code></pre>
-<pre><code>## Warning: package &#39;mgcv&#39; was built under R version 4.3.3</code></pre>
-<pre><code>## Loading required package: nlme</code></pre>
-<pre><code>## Warning: package &#39;nlme&#39; was built under R version 4.3.3</code></pre>
-<pre><code>## This is mgcv 1.9-1. For overview type &#39;help(&quot;mgcv-package&quot;)&#39;.</code></pre>
+<pre><code>## 载入需要的程辑包：mgcv</code></pre>
+<pre><code>## 载入需要的程辑包：nlme</code></pre>
+<pre><code>## This is mgcv 1.8-42. For overview type &#39;help(&quot;mgcv-package&quot;)&#39;.</code></pre>
 <pre class="r"><code># 1. Data Import and Preparation
 
 # Bear in mind that there may have some dataset with missing value NA
@@ -402,15 +400,14 @@ summary(hirs)</code></pre>
 <p>We have 8 observation, out of 99, that have missing record in patient
 baseline, but we do have the corresponding treatment result
 register.</p>
-<p>Imputing NA’s</p>
+<p>We use the library ‘mice’ to impute NA’.</p>
 <pre class="r"><code>library(mice)</code></pre>
-<pre><code>## Warning: package &#39;mice&#39; was built under R version 4.3.3</code></pre>
 <pre><code>## Warning in check_dep_version(): ABI version mismatch: 
 ## lme4 was built with Matrix ABI version 1
 ## Current Matrix ABI version is 0
 ## Please re-install lme4 from source or restore original &#39;Matrix&#39; package</code></pre>
 <pre><code>## 
-## Attaching package: &#39;mice&#39;</code></pre>
+## 载入程辑包：&#39;mice&#39;</code></pre>
 <pre><code>## The following object is masked from &#39;package:stats&#39;:
 ## 
 ##     filter</code></pre>
@@ -456,7 +453,6 @@ summary(is.na(hirs))</code></pre>
 ##    height       
 ##  Mode :logical  
 ##  FALSE:99</code></pre>
-<p>We use the library ‘mice’</p>
 <pre class="r"><code># 2. Exploratory Data Analysis
 
 summary(hirs)</code></pre>
@@ -550,7 +546,7 @@ summary(m4) #it seems to be the best model of the forth</code></pre>
 ## 
 ## R-sq.(adj) =  0.308   Deviance explained = 42.7%
 ## -REML = 278.27  Scale est. = 19.214    n = 99</code></pre>
-<pre class="r"><code>#Changing methods
+<pre class="r"><code># It&#39;s seems that the fourth model is the best combination, then let&#39;s process to change a different method.
 
 m5 &lt;- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
           s(SysPres) + s(DiaPres) + s(weight) + s(height),
@@ -908,7 +904,7 @@ and the best one seems to be the fifth one. We will check it better in
 the next steps.</p>
 <pre class="r"><code># 5. Model Comparison
 # Use ANOVA to compare nested models. Note: 
-# - Strictly, m2 is not nested in m1 (different structure due to by=Treatment),
+# - Strictly, m4 is not nested in m3 (different structure due to by=Treatment),
 #   but we can still get some insight. For nested comparisons, focus on models
 #   that differ by terms. Alternatively, compare AIC for all models.
 

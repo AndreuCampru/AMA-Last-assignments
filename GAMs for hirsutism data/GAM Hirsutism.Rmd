@@ -11,7 +11,6 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ```{r}
 # Clear environment
 rm(list=ls())
@@ -38,7 +37,7 @@ hirs$Treatment <- as.factor(hirs$Treatment)
 
 We have 8 observation, out of 99, that have missing record in patient baseline, but we do have the corresponding treatment result register.
 
-Imputing NA's
+We use the library 'mice' to impute NA'.
 
 ```{r}
 library(mice)
@@ -47,7 +46,6 @@ hirs <- complete(imputed_data)
 summary(is.na(hirs))
 ```
 
-We use the library 'mice' 
 
 ```{r}
 # 2. Exploratory Data Analysis
@@ -98,7 +96,7 @@ m4 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) +
           data = hirs, method = "REML")
 summary(m4) #it seems to be the best model of the forth
 
-#Changing methods
+# It's seems that the fourth model is the best combination, then let's process to change a different method.
 
 m5 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
           s(SysPres) + s(DiaPres) + s(weight) + s(height),
@@ -107,7 +105,6 @@ m5 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) +
 m6 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
           s(SysPres) + s(DiaPres) + s(weight) + s(height),
           data = hirs, method = "ML")
-
 ```
 
 
@@ -161,12 +158,13 @@ par(mfrow=c(1,1))
 gam.check(m6)
 
 ```
+
 The first model has a low R-squared (0.252) and the deviance explained is also very low (30%).The next models improve the performance and the best one seems to be the fifth one. We will check it better in the next steps.
 
 ```{r}
 # 5. Model Comparison
 # Use ANOVA to compare nested models. Note: 
-# - Strictly, m2 is not nested in m1 (different structure due to by=Treatment),
+# - Strictly, m4 is not nested in m3 (different structure due to by=Treatment),
 #   but we can still get some insight. For nested comparisons, focus on models
 #   that differ by terms. Alternatively, compare AIC for all models.
 
