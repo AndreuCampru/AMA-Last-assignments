@@ -25,7 +25,7 @@ if(!require("mgcv")) {
 ```{r}
 # 1. Data Import and Preparation
 
-# Bear in mind that there may have some dataset with missing value NA
+# Bear in mind that there may be some observations with missing values (NA)
 hirs <- read.table("hirsutism.dat",header=T, sep="\t",fill=TRUE)
 
 # Check structure and ensure that Treatment is a factor
@@ -37,7 +37,7 @@ hirs$Treatment <- as.factor(hirs$Treatment)
 
 We have 8 observation, out of 99, that have missing record in patient baseline, but we do have the corresponding treatment result register.
 
-We use the library 'mice' to impute NA'.
+We use the library 'mice' to impute missing values.
 
 ```{r}
 library(mice)
@@ -71,7 +71,7 @@ par(mfrow=c(1,1))
 
 ```
 
-We can conclude in these four clusters that, even with contraceptive only (Treatment 0), there is a improvement of hirsutism after 12 month of treatment, although no that significant compared with other with antiandrogen.
+We can conclude in these four clusters that, even with contraceptive only (Treatment 0), there is a improvement of hirsutism after 12 month of treatment, although not that significant compared with other with antiandrogen.
 
 ```{r}
 # 3. Fit Candidate GAM Models with increasing complexity.
