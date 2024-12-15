@@ -1,8 +1,8 @@
 ---
 title: "GAM Hirsutism"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 editor_options:
   chunk_output_type: console
 ---
@@ -37,6 +37,17 @@ hirs$Treatment <- as.factor(hirs$Treatment)
 ```
 
 We have 8 observation, out of 99, that have missing record in patient baseline, but we do have the corresponding treatment result register.
+
+Imputing NA's
+
+```{r}
+library(mice)
+imputed_data <- mice(hirs, m = 5, method = 'pmm', seed = 123)
+hirs <- complete(imputed_data)
+summary(is.na(hirs))
+```
+
+We use the library 'mice' 
 
 ```{r}
 # 2. Exploratory Data Analysis
@@ -85,6 +96,18 @@ m3 <- gam(FGm12 ~ Treatment + s(FGm0) + s(SysPres) + s(DiaPres) +
 m4 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
           s(SysPres) + s(DiaPres) + s(weight) + s(height),
           data = hirs, method = "REML")
+summary(m4) #it seems to be the best model of the forth
+
+#Changing methods
+
+m5 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
+          s(SysPres) + s(DiaPres) + s(weight) + s(height),
+          data = hirs, method = "GCV.Cp")
+
+m6 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
+          s(SysPres) + s(DiaPres) + s(weight) + s(height),
+          data = hirs, method = "ML")
+
 ```
 
 
@@ -97,7 +120,7 @@ cat("\n")
 par(mfrow=c(2,3))
 plot(m1, all.terms=TRUE, shade=TRUE, pages=1, main="Model 1")
 par(mfrow=c(1,1))
-vis.gam(m1, view=c("FGm0","weight"), theta=45, color="topo", main="M1: FGm0 vs weight")
+#vis.gam(m1, view=c("FGm0","weight"), theta=45, color="topo", main="M1: FGm0 vs weight")
 gam.check(m1)
 
 cat("---------- Model 2 Summary ----------\n")
@@ -122,8 +145,23 @@ par(mfrow=c(1,2))
 plot(m4, all.terms=TRUE, shade=TRUE, main="Model 4")
 par(mfrow=c(1,1))
 gam.check(m4)
-```
 
+cat("---------- Model 5 Summary ----------\n")
+summary(m5)
+par(mfrow=c(1,2))
+plot(m5, all.terms=TRUE, shade=TRUE, main="Model 5")
+par(mfrow=c(1,1))
+gam.check(m5)
+
+cat("---------- Model 6 Summary ----------\n")
+summary(m6)
+par(mfrow=c(1,2))
+plot(m6, all.terms=TRUE, shade=TRUE, main="Model 6")
+par(mfrow=c(1,1))
+gam.check(m6)
+
+```
+The first model has a low R-squared (0.252) and the deviance explained is also very low (30%).The next models improve the performance and the best one seems to be the fifth one. We will check it better in the next steps.
 
 ```{r}
 # 5. Model Comparison
@@ -133,37 +171,34 @@ gam.check(m4)
 #   that differ by terms. Alternatively, compare AIC for all models.
 
 cat("\n---------- Model Comparisons (ANOVA) ----------\n")
-anova(m1, m2, m3, m4, test="F")
+anova(m1, m2, m3, m4, m5, m6, test="F")
 
 cat("\n---------- AIC Comparison ----------\n")
-AIC(m1, m2, m3, m4)
+AIC(m1, m2, m3, m4, m5, m6)
 
 ```
 
+Comparing the anova we can observe that the model 5 is the one with the lowest residual deviance. We can observe that the change between the forth model and the fifth model is significant, so we can confirm that the change in the method was useful.
+
+Regarding the AIC, the lowest one is m5 too so it re-affirms the previous observation.
 
 ```{r}
-# 6. Selecting the Most Appropriate Model
-
-# Based on the summaries, diagnostics, and comparison:
-# - Look at the deviance explained in summaries.
-# - Check residual patterns in gam.check plots.
-# - Compare AIC values: lower is typically better.
-# - Check significance of smooth terms and treatment effects.
-```
-
-```{r}
-# 7. Final Model Interpretation
-
 cat("\n---------- Final Model ----------\n")
-summary(m4)
+summary(m5)
 
 # Examine partial effects more thoroughly:
 par(mfrow=c(2,3))
-plot(m4, all.terms=TRUE, shade=TRUE, main="Final Model (m4)")
+plot(m5, all.terms=TRUE, shade=TRUE, main="Final Model (m5)")
 par(mfrow=c(1,1))
 
 # Visualize 3D surfaces for interesting pairs of predictors:
-vis.gam(m4, view=c("FGm0","weight"), cond=list(Treatment="2"), 
-        theta=30, color="terrain", main="M4:")
+vis.gam(m5, view=c("FGm0","weight"), cond=list(Treatment="2"), 
+        theta=30, color="terrain", main="M5:")
 ```
 
+
+The adjusted R-squared indicates that 37.5% of the variability in FGm12 is explained by the model. We think we may need to include more variables to improve the model.
+
+Analysing the variables, we can see that Systolic blood pressure (s(SysPres)) shows a significant linear effect on FGm12. Diastolic blood pressure (s(DiaPres)), weight (s(weight)), and height (s(height)) were not significant predictors.
+
+All treatment groups (1, 2, and 3) showed significant reductions in FGm12 compared to the reference group (Treatment0), with the greatest reduction in Treatment1.
