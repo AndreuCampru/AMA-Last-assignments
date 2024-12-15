@@ -71,10 +71,10 @@ par(mfrow=c(1,1))
 
 ```
 
-We can conclude in the four clusters that, even only with contraceptive (Treatment 0), there is a improvement of hirsutism after 12 month of treatment, although no that significant compared with other with antiandrogen.
+We can conclude in these four clusters that, even with contraceptive only (Treatment 0), there is a improvement of hirsutism after 12 month of treatment, although no that significant compared with other with antiandrogen.
 
 ```{r}
-# 3. Fit Candidate GAM Models
+# 3. Fit Candidate GAM Models with increasing complexity.
 
 # Model 1: A very simple model including only FGm0 and Treatment
 m1 <- gam(FGm12 ~ Treatment + s(FGm0),
@@ -94,9 +94,47 @@ m3 <- gam(FGm12 ~ Treatment + s(FGm0) + s(SysPres) + s(DiaPres) +
 m4 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
           s(SysPres) + s(DiaPres) + s(weight) + s(height),
           data = hirs, method = "REML")
-summary(m4) #it seems to be the best model of the forth
 
-# It's seems that the fourth model is the best combination, then let's process to change a different method.
+# Stack all the models into a list for easy comparison.
+models <- list(m1=m1, m2=m2, m3=m3, m4=m4)
+```
+
+Then let's do a simple model comparison.
+
+```{r}
+# 4. Model comparison (R-sq and Deviance explained metrics)
+
+for (m_name in names(models)) {
+  m <- models[[m_name]]
+  
+  cat("----------", m_name, "----------\n")
+  
+  # Model summary
+  s <- summary(m)
+  print(s)
+  
+  # Model plots
+  par(mfrow=c(2,2))
+  plot(m, all.terms=TRUE, shade=TRUE, main=paste("Plots:", m_name))
+  par(mfrow=c(1,1))
+  
+  # Example vis.gam (only if model has at least two continuous predictors)
+  if("weight" %in% names(m$model) && "FGm0" %in% names(m$model)){
+    vis.gam(m, view=c("FGm0","weight"), cond=list(Treatment=levels(hirs$Treatment)[1]),
+            theta=45, color="topo", main=paste("vis.gam:", m_name, "(FGm0 vs weight)"))
+  }
+
+  # gam.check
+  cat("gam.check for", m_name, "\n")
+  gam.check(m)
+}
+```
+
+
+The first model has a low R-squared (0.252) and the deviance explained is also very low (30%).The next models improve the performance and the best one seems to be the fourth one, with a R-squared value of 0.308 and explained deviance of 42.7%.
+
+```{r}
+# Taking fourth model as baseline, let's try with different method instead of "REML"
 
 m5 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) + 
           s(SysPres) + s(DiaPres) + s(weight) + s(height),
@@ -109,79 +147,23 @@ m6 <- gam(FGm12 ~ Treatment + s(FGm0, by=Treatment) +
 
 
 ```{r}
-# 4. Model Summaries and Diagnostics
-
-cat("---------- Model 1 Summary ----------\n")
-summary(m1)
-cat("\n")
-par(mfrow=c(2,3))
-plot(m1, all.terms=TRUE, shade=TRUE, pages=1, main="Model 1")
-par(mfrow=c(1,1))
-#vis.gam(m1, view=c("FGm0","weight"), theta=45, color="topo", main="M1: FGm0 vs weight")
-gam.check(m1)
-
-cat("---------- Model 2 Summary ----------\n")
-summary(m2)
-par(mfrow=c(2,3))
-plot(m2, all.terms=TRUE, shade=TRUE, pages=1, main="Model 2")
-par(mfrow=c(1,1))
-vis.gam(m2, view=c("FGm0","weight"), cond=list(Treatment="1"), 
-        theta=45, color="topo", main="M2: FGm0 vs weight (Treatment=1)")
-gam.check(m2)
-
-cat("---------- Model 3 Summary ----------\n")
-summary(m3)
-par(mfrow=c(2,2))
-plot(m3, all.terms=TRUE, shade=TRUE, pages=1, main="Model 3")
-par(mfrow=c(1,1))
-gam.check(m3)
-
-cat("---------- Model 4 Summary ----------\n")
-summary(m4)
-par(mfrow=c(1,2))
-plot(m4, all.terms=TRUE, shade=TRUE, main="Model 4")
-par(mfrow=c(1,1))
-gam.check(m4)
-
-cat("---------- Model 5 Summary ----------\n")
-summary(m5)
-par(mfrow=c(1,2))
-plot(m5, all.terms=TRUE, shade=TRUE, main="Model 5")
-par(mfrow=c(1,1))
-gam.check(m5)
-
-cat("---------- Model 6 Summary ----------\n")
-summary(m6)
-par(mfrow=c(1,2))
-plot(m6, all.terms=TRUE, shade=TRUE, main="Model 6")
-par(mfrow=c(1,1))
-gam.check(m6)
-
-```
-
-The first model has a low R-squared (0.252) and the deviance explained is also very low (30%).The next models improve the performance and the best one seems to be the fifth one. We will check it better in the next steps.
-
-```{r}
-# 5. Model Comparison
+# 5. Model Comparison with Anova
 # Use ANOVA to compare nested models. Note: 
 # - Strictly, m4 is not nested in m3 (different structure due to by=Treatment),
 #   but we can still get some insight. For nested comparisons, focus on models
 #   that differ by terms. Alternatively, compare AIC for all models.
 
-cat("\n---------- Model Comparisons (ANOVA) ----------\n")
-anova(m1, m2, m3, m4, m5, m6, test="F")
+anova(m4, m5, m6, test="F")
 
-cat("\n---------- AIC Comparison ----------\n")
-AIC(m1, m2, m3, m4, m5, m6)
+AIC(m4, m5, m6)
 
 ```
 
-Comparing the anova we can observe that the model 5 is the one with the lowest residual deviance. We can observe that the change between the forth model and the fifth model is significant, so we can confirm that the change in the method was useful.
+Comparing the Anova we can observe that the model 5 is the one with the lowest residual deviance. We can observe that the change between the fourth model and the fifth model is significant, so we can confirm that the change in the method was useful.
 
 Regarding the AIC, the lowest one is m5 too so it re-affirms the previous observation.
 
 ```{r}
-cat("\n---------- Final Model ----------\n")
 summary(m5)
 
 # Examine partial effects more thoroughly:
@@ -195,7 +177,7 @@ vis.gam(m5, view=c("FGm0","weight"), cond=list(Treatment="2"),
 ```
 
 
-The adjusted R-squared indicates that 37.5% of the variability in FGm12 is explained by the model. We think we may need to include more variables to improve the model.
+The adjusted R-squared indicates that 0.375 of the variability in FGm12 is explained by the model. We think we may need to include more variables to improve the model.
 
 Analysing the variables, we can see that Systolic blood pressure (s(SysPres)) shows a significant linear effect on FGm12. Diastolic blood pressure (s(DiaPres)), weight (s(weight)), and height (s(height)) were not significant predictors.
 
