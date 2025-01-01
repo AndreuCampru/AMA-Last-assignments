@@ -97,7 +97,7 @@ grid.arrange(rf_imp_vip, rf_perm_vip, rf_shapley,
 )
 ```
 
-**2. Fit a linear model and a gam model.**
+**2. Fit a linear model and a gam model**
 
 a.  Summarize, numerically and graphically, the fitted models.
 
@@ -178,5 +178,136 @@ grid.arrange(
   top = "1,1: RF Impurity. 1,2: Shapley RF. 2,1: Shapley LM. 2,2: Shapley GAM"
 )
 
+```
+
+**2.Relevance by Ghost Variables**
+
+Compute the relevance by ghost variables in the three fitted models.
+
+```{r}
+library(grid)
+library(ggplot2)
+source("relev.ghost.var.R")  
+```
+
+```{r}
+# GAM model
+Rel_Gh_Var_gam <- relev.ghost.var(
+  model = gam_concrete,                   
+  newdata = test_set[, -which(names(test_set) == "Strength")], 
+  y.ts = test_set$Strength,               
+  func.model.ghost.var = lm
+)
+
+par(mar = c(4, 4, 2, 1))
+plot.relev.ghost.var(
+  Rel_Gh_Var_gam,
+  n1 = 500,    
+  ncols.plot = 3 
+)
+
+# Combine ghost variable relevance with Shapley values
+aux <- cbind(
+  Rel_Gh_Var_gam$relev.ghost, 
+  gam_concrete_shapley$data$Importance
+)
+
+# Scatter plot
+plot(aux[, 1], aux[, 2], 
+     col = 0, 
+     xlab = "Relevance by Ghost Variables", 
+     ylab = "Shapley Variable Importance",
+     main = "GAM model")
+
+# Add text labels for each variable
+text(aux[, 1], aux[, 2], labels = row.names(aux))
+
+```
+
+```{r}
+Rel_Gh_Var_lm <- relev.ghost.var(
+  model = lm_concrete,
+  newdata = test_set[, -which(names(test_set) == "Strength")], 
+  y.ts = test_set$Strength,                                   
+  func.model.ghost.var = lm                              
+)
+
+par(mar = c(4, 4, 2, 1))
+plot.relev.ghost.var(
+  Rel_Gh_Var_lm,
+  n1 = 500,    
+  ncols.plot = 3 
+)
+
+# Combine ghost variable relevance with Shapley values
+aux <- cbind(
+  Rel_Gh_Var_lm$relev.ghost, 
+  lm_concrete_shapley$data$Importance
+)
+
+# Scatter plot
+plot(aux[, 1], aux[, 2], 
+     col = 0, 
+     xlab = "Relevance by Ghost Variables", 
+     ylab = "Shapley Variable Importance",
+     main = "Linear model")
+
+# Add text labels for each variable
+text(aux[, 1], aux[, 2], labels = row.names(aux))
+
+```
+
+```{r}
+model_rf_imp <- ranger(
+  x          = train_set[, setdiff(names(train_set), "Strength")],
+  y          = train_set$Strength,
+  importance = "impurity"
+)
+```
+
+```{r}
+# I was having problems with the "relev.ghost.var" function when using the "range" package to fit the random forest. I have changed to the "randomForest" library and then it works. The model should be the same as the one fitted before since we set a seed and specify the same number of trees.
+
+library(randomForest)
+
+model_rf <- randomForest(
+  Strength ~ .,   
+  data = train_set,
+  importance = TRUE, 
+  ntree = 500     
+)
+print(model_rf)
+```
+
+```{r}
+Rel_Gh_Var_rf <- relev.ghost.var(
+  model = model_rf,
+  newdata = test_set, 
+  y.ts = test_set$Strength,                                   
+  func.model.ghost.var = lm
+)
+
+par(mar = c(4, 4, 2, 1))
+plot.relev.ghost.var(
+  Rel_Gh_Var_rf,
+  n1 = 500,    
+  ncols.plot = 3 
+)
+
+# Combine ghost variable relevance with Shapley values
+aux <- cbind(
+  Rel_Gh_Var_rf$relev.ghost, 
+  rf_shapley$data$Importance
+)
+
+# Scatter plot
+plot(aux[, 1], aux[, 2], 
+     col = 0, 
+     xlab = "Relevance by Ghost Variables", 
+     ylab = "Shapley Variable Importance",
+     main = "Random forest model")
+
+# Add text labels for each variable
+text(aux[, 1], aux[, 2], labels = row.names(aux))
 ```
 
