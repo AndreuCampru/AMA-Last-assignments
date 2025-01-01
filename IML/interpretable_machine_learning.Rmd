@@ -1,0 +1,182 @@
+---
+title: "Interpretability and Explainability in Machine Learning"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load the concrete dataset
+library(readxl)
+concrete <- as.data.frame(read_excel("Concrete_Data.xls"))
+DescVars <- names(concrete)
+names(concrete) <- c(
+  "Cement", "Slag", "FlyAsh", "Water", "Superplast",
+  "CoarseAggr", "FineAggr", "Age", "Strength"
+)
+```
+
+**Data processing: Creating training and test sets**\
+Create a training sample choosing 700 data at random. The non-chosen data will be the test set.
+
+```{r}
+# Set a seed for reproducibility
+set.seed(123456)
+
+# Create indices for the training set
+train_indices <- sort(sample(1:nrow(concrete), size = 700, replace = FALSE))
+
+# Split the data into training and test sets
+train_set <- concrete[train_indices, ]
+test_set <- concrete[-train_indices, ]
+
+# Check the dimensions of the splits
+cat("Training set dimensions: ", dim(train_set), "\n")
+cat("Test set dimensions: ", dim(test_set), "\n")
+```
+
+**1. Fit a Random Forest**
+
+a.  Compute the *Variable Importance* by the reduction of the **impurity** at the splits defined by each variable.
+
+```{r}
+library(ranger)
+
+model_rf_imp <- ranger(
+  Strength ~ .,
+  data = train_set,
+  importance = "impurity"
+)
+print(model_rf_imp)
+```
+
+b.  Compute the *Variable Importance* by out-of-bag random permutations.
+
+```{r}
+model_rf_perm <- ranger(
+  Strength ~ .,
+  data = train_set,
+  importance = "permutation"
+)
+print(model_rf_perm)
+```
+
+c.  Do a graphical representation of both *Variable Importance* measures.
+
+```{r}
+library(vip)
+library(gridExtra)
+
+rf_imp_vip <- vip(model_rf_imp, num_features = 8)
+rf_perm_vip <- vip(model_rf_perm, num_features = 8)
+grid.arrange(rf_imp_vip, rf_perm_vip,
+  ncol = 2,
+  top = "Left: Reduction in impurity. Right: Out-of-bag permutations"
+)
+```
+
+d.  Compute the *Variable Importance* of each variable by Shapley Values.
+
+```{r}
+library(DALEX)
+
+rf_shapley <- vip(
+  model_rf_imp,
+  method = "shap",
+  pred_wrapper = yhat,
+  num_features = 8,
+  train = train_set,
+  newdata = test_set[, -which(names(test_set) == "Strength")]
+)
+
+grid.arrange(rf_imp_vip, rf_perm_vip, rf_shapley,
+  ncol = 2, nrow = 2,
+  top = "Top left: Impurity. Top right: OOB permutations. Bottom: Shapley values"
+)
+```
+
+**2. Fit a linear model and a gam model.**
+
+a.  Summarize, numerically and graphically, the fitted models.
+
+```{r}
+# Linear model fit
+lm_concrete <- lm(Strength ~ ., data = train_set)
+
+# Numerical summary of the fitted model
+(summ_lm_concrete <- summary(lm_concrete))
+
+# Graphical summary for the linear model
+par(mfrow = c(2, 2))  # Arrange plots in a 2x2 grid
+plot(lm_concrete)
+
+```
+
+```{r}
+library(mgcv)
+
+# Fit a Generalized Additive Model (GAM)
+gam_concrete <- gam(Strength ~ s(Cement) + s(Slag) + s(FlyAsh) + 
+                      s(Water) + s(Superplast) + s(CoarseAggr) + 
+                      s(FineAggr) + s(Age), 
+                    data = train_set)
+
+# Numerical summary of the fitted model
+(summ_gam_concrete <- summary(gam_concrete))
+
+# Graphical summary for the GAM model
+par(mfrow = c(3, 3))
+plot(gam_concrete, residuals = TRUE, rug = TRUE, pages = 1)
+```
+
+b.  Compute the *Variable Importance* by Shapley values in the linear and gam fitted models. Compare your results with what you have learned before.
+
+```{r}
+# Compute Shapley values for the linear model
+lm_concrete_shapley <- vip(
+  lm_concrete, 
+  method = "shap",
+  pred_wrapper = predict.lm,  
+  train = train_set,          
+  newdata = test_set,        
+  num_features = ncol(train_set) - 1,  
+  exact = TRUE                
+)
+
+# Plot Shapley values for the linear model
+plot(lm_concrete_shapley)
+
+```
+
+```{r}
+# Compute Shapley values for the GAM
+gam_concrete_shapley <- vip(
+  gam_concrete, 
+  method = "shap",
+  pred_wrapper = predict.gam,  
+  train = train_set,          
+  newdata = test_set,          
+  num_features = ncol(train_set) - 1,  
+  exact = TRUE               
+)
+
+# Plot Shapley values for the GAM
+plot(gam_concrete_shapley)
+
+```
+
+```{r}
+# Combine all plots
+grid.arrange(
+  rf_imp_vip, 
+  rf_shapley, 
+  lm_concrete_shapley, 
+  gam_concrete_shapley, 
+  ncol = 2, nrow = 2,
+  top = "1,1: RF Impurity. 1,2: Shapley RF. 2,1: Shapley LM. 2,2: Shapley GAM"
+)
+
+```
+
