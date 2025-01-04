@@ -180,7 +180,7 @@ grid.arrange(
 
 ```
 
-**2.Relevance by Ghost Variables**
+**3.Relevance by Ghost Variables**
 
 Compute the relevance by ghost variables in the three fitted models.
 
@@ -266,7 +266,7 @@ model_rf_imp <- ranger(
 ```
 
 ```{r}
-# I was having problems with the "relev.ghost.var" function when using the "range" package to fit the random forest. I have changed to the "randomForest" library and then it works. The model should be the same as the one fitted before since we set a seed and specify the same number of trees.
+# I was having problems with the "relev.ghost.var" function when using the "ranger" package to fit the random forest. I have changed to the "randomForest" library and then it works. The model should be the same as the one fitted before since we set a seed and specify the same number of trees.
 
 library(randomForest)
 
@@ -309,5 +309,41 @@ plot(aux[, 1], aux[, 2],
 
 # Add text labels for each variable
 text(aux[, 1], aux[, 2], labels = row.names(aux))
+```
+
+**4. Global Importance Measures and Plots using the library DALEX**
+
+a. Compute Variable Importance by Random Permutations
+b. Do the Partial Dependence Plot for each explanatory variable.
+c. Do the Local (or Conditional) Dependence Plot for each explanatory variable.
+
+```{r, message=FALSE, warning=FALSE}
+
+# Train a Random Forest model using the training set
+rf_model <- randomForest(Strength ~ ., data = train_set, importance = TRUE)
+
+# Create an explainer for the model
+explainer <- explain(
+  model = rf_model,
+  data = train_set[, -ncol(train_set)], # Explanatory variables
+  y = train_set$Strength,              # Target variable
+  label = "Random Forest"
+)
+
+# (a) Compute Variable Importance by Random Permutations
+importance <- model_parts(explainer)
+print(importance)
+plot(importance)
+
+# (b) Partial Dependence Plots for each explanatory variable
+pdp <- model_profile(explainer)
+print(pdp)
+plot(pdp)
+
+# (c) Local (Conditional) Dependence Plots
+# Example: First observation in the test set
+local_profile <- predict_profile(explainer, new_observation = test_set[1, -ncol(test_set)])
+print(local_profile)
+plot(local_profile)
 ```
 
