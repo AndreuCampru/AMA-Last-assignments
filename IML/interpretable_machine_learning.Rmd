@@ -319,15 +319,12 @@ c. Do the Local (or Conditional) Dependence Plot for each explanatory variable.
 
 ```{r, message=FALSE, warning=FALSE}
 
-# Train a Random Forest model using the training set
-rf_model <- randomForest(Strength ~ ., data = train_set, importance = TRUE)
-
-# Create an explainer for the model
-explainer <- explain.default(
-  model = rf_model,
+# Create an explainer for the existing model `model_rf_imp` from previous section
+explainer <- explain(
+  model = model_rf_imp,
   data = train_set[, -ncol(train_set)], # Explanatory variables
   y = train_set$Strength,              # Target variable
-  label = "Random Forest"
+  label = "Random Forest - Impurity"
 )
 
 # (a) Compute Variable Importance by Random Permutations
