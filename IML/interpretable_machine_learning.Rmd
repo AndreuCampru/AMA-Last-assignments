@@ -323,7 +323,7 @@ c. Do the Local (or Conditional) Dependence Plot for each explanatory variable.
 rf_model <- randomForest(Strength ~ ., data = train_set, importance = TRUE)
 
 # Create an explainer for the model
-explainer <- explain(
+explainer <- explain.default(
   model = rf_model,
   data = train_set[, -ncol(train_set)], # Explanatory variables
   y = train_set$Strength,              # Target variable
@@ -345,5 +345,119 @@ plot(pdp)
 local_profile <- predict_profile(explainer, new_observation = test_set[1, -ncol(test_set)])
 print(local_profile)
 plot(local_profile)
+```
+
+
+**5. Local explainers with library DALEX**
+
+ Choose two instances in the the test set, the prediction for which we want to explain:
+ • The data with the lowest value in Strength.
+ • The data with the largest value in Strength.
+ For these two instances, do the following tasks for the fitted random forest.
+ a. Explain the predictions using SHAP.
+ b. Explain the predictions using Break-down plots.
+ c. Explain the predictions using LIME.
+ d. Do the Individual conditional expectation (ICE) plot, or ceteris paribus plot
+ e. Plot in one graphic the Individual conditional expectation (ICE) plot for variable Age for eachcase in the test sample. Add the global Partial Depedence Plot
+ 
+Identifying the instances 
+ 
+```{r}
+
+lowest_strength <- test_set[which.min(test_set$Strength), ]
+highest_strength <- test_set[which.max(test_set$Strength), ]
+
+lowest_strength
+highest_strength
+
+
+```
+a. Explain the predictions using SHAP
+
+```{r}
+
+# SHAP lowest Strength instance
+bd_rf_low <- predict_parts(explainer = explainer,
+                           new_observation = lowest_strength,
+                           type = "shap")
+plot(bd_rf_low)
+
+# SHAP highest Strength instance
+bd_rf_high <- predict_parts(explainer = explainer,
+                            new_observation = highest_strength,
+                            type = "shap")
+plot(bd_rf_high)
+
+
+```
+
+b. Explain the predictions using Break-down plots.
+
+```{r}
+
+# Break-down lowest Strength instance
+bd_rf_low <- predict_parts(explainer = explainer,
+                           new_observation = lowest_strength,
+                           type = "break_down")
+plot(bd_rf_low, max_features = 11)
+
+# Break-down highest Strength instance
+bd_rf_high <- predict_parts(explainer = explainer,
+                            new_observation = highest_strength,
+                            type = "break_down")
+plot(bd_rf_high, max_features = 11)
+
+
+```
+
+c. Explain the predictions using LIME
+
+```{r}
+# LIME lowest Strength instance
+lime_rf_low <- predict_surrogate(explainer = explainer,
+                                 new_observation = lowest_strength,
+                                 type = "localModel")
+plot(lime_rf_low)
+
+# LIME highest Strength instance
+lime_rf_high <- predict_surrogate(explainer = explainer,
+                                  new_observation = highest_strength,
+                                  type = "localModel")
+plot(lime_rf_high)
+
+```
+d. Do the Individual conditional expectation (ICE) plot, or ceteris paribus plot
+
+```{r}
+
+# ICE lowest Strength instance
+cp_rf_low <- predict_profile(explainer = explainer,
+                             new_observation = lowest_strength)
+plot(cp_rf_low, facet_ncol = 2)
+
+# ICE highest Strength instance
+cp_rf_high <- predict_profile(explainer = explainer,
+                              new_observation = highest_strength)
+plot(cp_rf_high, facet_ncol = 2)
+
+
+```
+
+
+
+e. Plot in one graphic the Individual conditional expectation (ICE) plot for variable Age for each case in the test sample. Add the global Partial Depedence Plot
+
+
+
+```{r}
+mp_rf <- model_profile(explainer = explainer,
+  variables = "Age",
+  N = 100,
+  type = "partial"
+)
+
+plot(mp_rf, geom = "profiles") +  
+  ggtitle("Ceteris-paribus and partial-dependence profiles for temp")
+
 ```
 
