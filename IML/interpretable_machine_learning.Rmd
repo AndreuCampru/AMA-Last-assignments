@@ -450,13 +450,33 @@ e. Plot in one graphic the Individual conditional expectation (ICE) plot for var
 
 
 ```{r}
-mp_rf <- model_profile(explainer = explainer,
+
+# ICE for age
+ice_profiles <- predict_profile(
+  variables = "Age",
+  explainer = explainer,
+  new_observation = test_set
+)
+ice_profiles
+
+#no detecta be la variable age i no es pot fer el grafic, com veieu en aquest grafic apareixen totes les variables
+plot(ice_profiles, facet_ncol = 2)
+
+
+# Plot ICE profiles
+#plot(ice_profiles, geom = "profiles") +
+#  ggtitle("Individual Conditional Expectation (ICE) Plot for Age")
+
+#Partial Dependence Plot
+
+pdp_rf <- model_profile(explainer = explainer,
   variables = "Age",
   N = 100,
   type = "partial"
 )
 
-plot(mp_rf, geom = "profiles") +  
+
+plot(pdp_rf, geom = "profiles") +  
   ggtitle("Ceteris-paribus and partial-dependence profiles for temp")
 
 ```
