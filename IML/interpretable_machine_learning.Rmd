@@ -480,7 +480,7 @@ pdp_rf <- model_profile(explainer = explainer,
 
 
 plot(pdp_rf, geom = "profiles") +  
-  ggtitle("Ceteris-paribus and partial-dependence profiles for temp")
+  ggtitle("Ceteris-paribus and partial-dependence profiles for Age")
 
 ```
 
