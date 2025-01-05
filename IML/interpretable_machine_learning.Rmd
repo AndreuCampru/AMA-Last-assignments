@@ -410,6 +410,16 @@ plot(bd_rf_high, max_features = 11)
 c. Explain the predictions using LIME
 
 ```{r}
+# install.packages("remotes")
+# remotes::install_github("modeloriented/localmodel")
+
+```
+
+
+```{r}
+library(DALEXtra)
+library(localModel)  
+
 # LIME lowest Strength instance
 lime_rf_low <- predict_surrogate(explainer = explainer,
                                  new_observation = lowest_strength,
